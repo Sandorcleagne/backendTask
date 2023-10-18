@@ -12,11 +12,17 @@ const subCategoryRoutes = require("./routes/subCategoryRoutes");
 const productRoutes = require("./routes/productRoutes");
 connectDb();
 app.use(express.urlencoded({ extended: false }));
+app.use(express.static(__dirname));
 app.use(express.json());
 app.use(cors());
 app.use(cookieParser());
 app.use("/", userRoutes, categoryRoutes, subCategoryRoutes, productRoutes);
-app.use(express.static(__dirname));
+app.use(verifyJwt);
+app.get("/", async (req, res) => {
+  res.status(200).send({
+    baseResponse: { status: 1, msg: "user Authenticated" },
+  });
+});
 app.all("*", (req, res, next) => {
   const err = new Error(`Can't find ${req.originalUrl} on the server`);
   err.status = "fail";
@@ -30,11 +36,6 @@ app.use((error, req, res, next) => {
     status: error.statuscode,
     msg: error.message,
   });
-});
-app.use(verifyJwt);
-app.get("/", async (req, res) => {
-  console.log("res.cookie", res.cookie);
-  res.json("hello");
 });
 
 app.listen(PORT, () => {

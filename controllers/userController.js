@@ -151,33 +151,47 @@ const websiteRegister = async (req, res) => {
 const websiteLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (email && password) {
-      const checkUser = await CRMUserModel.findOne({
-        $and: [{ email: email }, { password: password }],
-      });
-      if (checkUser) {
-        const accesstoken = jwt.sign(
-          {
-            username: checkUser.name,
-          },
-          process.env.ACCESS_TOKEN_SECRETE,
-          { expiresIn: "30s" }
-        );
-        res.status(200).send({
-          baseResponse: { status: 1, msg: "user logged in successfully" },
-          response: { accesstoken: accesstoken },
-        });
-      } else {
-        res.status(200).send({
-          baseResponse: {
-            status: 0,
-            msg: "Wrong Credentials Please Try Again",
-          },
-        });
-      }
-    } else {
+    if (!email || !password) {
       res.status(200).send({
         baseResponse: { status: 0, msg: "All feilds are required" },
+      });
+    } else {
+    }
+    const checkUser = await CRMUserModel.findOne({
+      $and: [{ email: email }, { password: password }],
+    });
+    if (checkUser) {
+      const accesstoken = jwt.sign(
+        {
+          username: checkUser.name,
+        },
+        process.env.ACCESS_TOKEN_SECRETE,
+        { expiresIn: "30s" }
+      );
+      const refreshtoken = jwt.sign(
+        {
+          username: checkUser.name,
+        },
+        process.env.REFRESH_TOKEN_SECRETE,
+        { expiresIn: "1d" }
+      );
+      await CRMUserModel.updateOne(
+        {
+          $and: [{ email: email }, { password: password }],
+        },
+        { $set: { refreshToken: refreshtoken } }
+      );
+      res.cookie("jwt", accesstoken, {
+        httpOnly: true,
+        maxAge: 1000,
+      });
+      res.status(200).send({
+        baseResponse: { status: 1, msg: "user logged in successfully" },
+        response: { accesstoken: accesstoken },
+      });
+    } else {
+      res.status(200).send({
+        baseResponse: { status: 0, msg: "user id or password is wrong" },
       });
     }
   } catch (error) {
